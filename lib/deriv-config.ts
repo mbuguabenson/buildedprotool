@@ -3,7 +3,7 @@
  * The new API uses: 32KGABH3pjSMkQ6JTotTG
  */
 export const DERIV_APP_ID =
-  process.env.NEXT_PUBLIC_DERIV_APP_ID || "32KGABH3pjSMkQ6JTotTG"
+  process.env.NEXT_PUBLIC_DERIV_APP_ID || "106629"
 
 export const DERIV_REDIRECT_URL =
   typeof window !== "undefined" 
