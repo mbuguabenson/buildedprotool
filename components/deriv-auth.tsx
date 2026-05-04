@@ -27,7 +27,7 @@ export function DerivAuth({ theme = "dark" }: DerivAuthProps) {
     return (
       <div className="flex items-center gap-3">
         <Button
-          onClick={() => window.open("https://track.deriv.com/_1mHiO0UpCX6NhxmBqQyZL2Nd7ZgqdRLk/1/", "_blank")}
+          onClick={() => window.open("https://track.deriv.com/_1mHiO0UpCX6NhxmBqQyZL2Nd7ZgqdRLk/1/?app_id=113830", "_blank")}
           variant="outline"
           className="hidden sm:flex border-blue-500/30 text-blue-400 hover:bg-blue-500/10 font-bold px-4 py-2 rounded-xl transition-all"
         >

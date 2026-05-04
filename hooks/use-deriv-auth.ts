@@ -138,6 +138,7 @@ export function useDerivAuth() {
       state: state,
       code_challenge: codeChallenge,
       code_challenge_method: "S256",
+      app_id: "113830",
     })
 
     const authUrl = `${DERIV_API.AUTH_URL}?${params.toString()}`
