@@ -16,15 +16,13 @@ interface TradingTabProps {
 }
 
 export function TradingTab({ theme: propTheme }: TradingTabProps) {
+  const { apiClient, isConnected, isAuthorized, error, connectionStatus, balance: globalBalance } = useDerivAPI()
   const {
     token: globalApiToken,
     isLoggedIn,
-    balance: globalBalance,
     accountType: globalAccountType,
-    accountCode: globalAccountCode,
+    activeLoginId: globalAccountCode,
   } = useDerivAuth()
-
-  const { apiClient, isConnected, isAuthorized, error, connectionStatus } = useDerivAPI()
 
   const currentThemeFromProps = propTheme || "dark"
 

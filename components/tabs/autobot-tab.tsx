@@ -124,8 +124,15 @@ const calculateSuggestedMartingale = (strategy: BotStrategy, stake: number): num
 }
 
 export function AutoBotTab({ theme = "dark", symbol }: AutoBotTabProps) {
-  const { apiClient, isConnected, isAuthorized, error: apiError } = useDerivAPI()
-  const { accountInfo } = useDerivAuth()
+  const { apiClient, isConnected, isAuthorized, error: apiError, balance } = useDerivAPI()
+  const { accounts, activeLoginId } = useDerivAuth()
+  
+  const activeAccount = accounts.find(a => a.id === activeLoginId)
+  const accountInfo = activeAccount ? {
+    loginid: activeAccount.id,
+    currency: activeAccount.currency,
+    balance: balance?.amount || 0
+  } : null
 
   const [activeBots, setActiveBots] = useState<Map<BotStrategy, AutoBot>>(new Map())
   const [botStates, setBotStates] = useState<Map<BotStrategy, AutoBotState>>(new Map())

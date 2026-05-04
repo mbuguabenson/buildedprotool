@@ -71,8 +71,15 @@ const BOT_STRATEGIES: { id: BotStrategy; name: string; description: string }[] =
 ]
 
 export function AutoBotTab({ theme = "dark", symbol }: AutoBotTabProps) {
-  const { apiClient, isConnected, isAuthorized, error: apiError } = useDerivAPI()
-  const { accountInfo } = useDerivAuth()
+  const { apiClient, isConnected, isAuthorized, error: apiError, balance } = useDerivAPI()
+  const { accounts, activeLoginId } = useDerivAuth()
+
+  const activeAccount = accounts.find(a => a.id === activeLoginId)
+  const accountInfo = activeAccount ? {
+    loginid: activeAccount.id,
+    currency: activeAccount.currency,
+    balance: balance?.amount || 0
+  } : null
   const [marketPrice, setMarketPrice] = useState<number>(0)
   const [selectedStrategy, setSelectedStrategy] = useState<BotStrategy>("EVEN_ODD")
   const [bot, setBot] = useState<AutoBot | null>(null)

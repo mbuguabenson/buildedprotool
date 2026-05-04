@@ -52,7 +52,7 @@ export function MarketSelector({ symbols, currentSymbol, onSymbolChange, theme =
 
     const groups: Record<string, DerivSymbol[]> = {}
     otherSymbols.forEach((symbol) => {
-      const market = symbol.market_display_name || symbol.market
+      const market = symbol.market_display_name || symbol.market || "Other"
       if (!groups[market]) {
         groups[market] = []
       }

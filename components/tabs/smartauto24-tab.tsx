@@ -41,8 +41,8 @@ interface BotStats {
 }
 
 export function SmartAuto24Tab({ theme }: { theme: "light" | "dark" }) {
-  const { apiClient, isConnected, isAuthorized } = useDerivAPI()
-  const { balance, isLoggedIn, submitApiToken, token } = useDerivAuth()
+  const { apiClient, isConnected, isAuthorized, balance } = useDerivAPI()
+  const { isLoggedIn, submitApiToken, token } = useDerivAuth()
 
   const [apiTokenInput, setApiTokenInput] = useState("")
   const [showToken, setShowToken] = useState(false)

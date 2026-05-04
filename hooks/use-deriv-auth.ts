@@ -150,7 +150,6 @@ export function useDerivAuth() {
     localStorage.removeItem("deriv_account_id")
     setToken("")
     setIsLoggedIn(false)
-    setBalance(null)
     setAccountType(null)
     setActiveLoginId(null)
     setAccounts([])
@@ -226,7 +225,6 @@ export function useDerivAuth() {
   return {
     token,
     isLoggedIn,
-    balance,
     accountType,
     accounts,
     activeLoginId,
@@ -235,6 +233,7 @@ export function useDerivAuth() {
     login,
     logout,
     resetDemoBalance,
+    submitApiToken: connectWithToken,
     switchAccount: (loginId: string, token: string) => connectWithToken(token, loginId),
   }
 }

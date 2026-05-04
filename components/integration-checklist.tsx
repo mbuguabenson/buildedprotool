@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, XCircle, AlertCircle, RefreshCw, Github } from "lucide-react"
 import { useDerivAuth } from "@/hooks/use-deriv-auth"
+import { useDerivAPI } from "@/lib/deriv-api-context"
 import { DERIV_REPOS } from "@/lib/deriv-config"
 
 interface ChecklistItem {
@@ -30,7 +31,8 @@ export function IntegrationChecklist({
   currentDigit,
   analysis,
 }: IntegrationChecklistProps) {
-  const { isLoggedIn, balance, accountType, accounts } = useDerivAuth()
+  const { balance } = useDerivAPI()
+  const { isLoggedIn, accountType, accounts } = useDerivAuth()
   const [checklist, setChecklist] = useState<ChecklistItem[]>([])
   const [isChecking, setIsChecking] = useState(false)
 
