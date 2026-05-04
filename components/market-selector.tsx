@@ -12,9 +12,10 @@ interface MarketSelectorProps {
   currentSymbol: string
   onSymbolChange: (symbol: string) => void
   theme?: "light" | "dark"
+  isLoading?: boolean
 }
 
-export function MarketSelector({ symbols, currentSymbol, onSymbolChange, theme = "dark" }: MarketSelectorProps) {
+export function MarketSelector({ symbols, currentSymbol, onSymbolChange, theme = "dark", isLoading = false }: MarketSelectorProps) {
   const [open, setOpen] = useState(false)
 
   const groupedSymbols = useMemo(() => {
@@ -85,13 +86,21 @@ export function MarketSelector({ symbols, currentSymbol, onSymbolChange, theme =
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={`w-[220px] justify-between ${
+          disabled={isLoading}
+          className={`w-[180px] sm:w-[220px] justify-between ${
             theme === "dark"
               ? "bg-[#0f1629]/50 border-blue-500/30 text-white hover:bg-[#1a2235] hover:text-white"
               : "bg-white border-gray-300 text-gray-900 hover:bg-gray-50"
-          }`}
+          } ${isLoading ? "animate-pulse" : ""}`}
         >
-          {currentSymbolData?.display_name || currentSymbol}
+          {isLoading ? (
+            <span className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
+              Loading...
+            </span>
+          ) : (
+            currentSymbolData?.display_name || currentSymbol
+          )}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>

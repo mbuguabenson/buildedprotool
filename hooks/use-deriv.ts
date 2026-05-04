@@ -9,6 +9,8 @@ import { marketDataDebugger } from "@/lib/market-data-debugger"
 export interface DerivSymbol {
   symbol: string
   display_name: string
+  market?: string
+  market_display_name?: string
 }
 
 export interface ConnectionLog {

@@ -181,14 +181,13 @@ export default function DerivAnalysisApp() {
 
               <DerivAuth theme={theme} />
 
-              {availableSymbols.length > 0 && (
-                <MarketSelector
-                  symbols={availableSymbols}
-                  currentSymbol={symbol}
-                  onSymbolChange={changeSymbol}
-                  theme={theme}
-                />
-              )}
+              <MarketSelector
+                symbols={availableSymbols}
+                currentSymbol={symbol}
+                onSymbolChange={changeSymbol}
+                theme={theme}
+                isLoading={availableSymbols.length === 0}
+              />
 
               <div className="flex items-center gap-0.5 text-xs">
                 <span

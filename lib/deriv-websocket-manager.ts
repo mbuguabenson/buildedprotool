@@ -317,12 +317,9 @@ export class DerivWebSocketManager {
     } catch (_) {}
   }
 
-  public async getActiveSymbols(): Promise<Array<{ symbol: string; display_name: string }>> {
+  public async getActiveSymbols(): Promise<any[]> {
     const response = await this.request({ active_symbols: "brief" })
-    return (response.active_symbols ?? []).map((s: any) => ({
-      symbol: s.symbol,
-      display_name: s.display_name,
-    }))
+    return response.active_symbols ?? []
   }
 
   public extractLastDigit(quote: number): number {

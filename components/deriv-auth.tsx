@@ -1,19 +1,19 @@
 import { useState } from "react"
 import { useDerivAuth } from "@/hooks/use-deriv-auth"
+import { useDerivAPI } from "@/lib/deriv-api-context"
 import { Button } from "@/components/ui/button"
-import { Lock, LogOut, ChevronDown, ChevronRight, User } from "lucide-react"
+import { Lock, ChevronDown } from "lucide-react"
 import { AccountSwitcherModal } from "./account-switcher-modal"
-
 interface DerivAuthProps {
   theme?: "light" | "dark"
 }
 
 export function DerivAuth({ theme = "dark" }: DerivAuthProps) {
+  const { balance } = useDerivAPI()
   const {
     isLoggedIn,
     login,
     logout,
-    balance,
     accountType,
     accounts,
     switchAccount,
@@ -47,13 +47,13 @@ export function DerivAuth({ theme = "dark" }: DerivAuthProps) {
   return (
     <div className="flex items-center gap-4">
       {/* Balance Display */}
-      <div className="hidden md:flex flex-col items-end mr-2">
-        <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Balance</span>
-        <div className="flex items-center gap-2">
-          <span className="text-xl font-black text-white tracking-tight">
+      <div className="flex flex-col items-end mr-1 sm:mr-2">
+        <span className="text-[8px] sm:text-[10px] text-gray-500 uppercase tracking-widest font-bold">Balance</span>
+        <div className="flex items-center gap-1 sm:gap-2">
+          <span className="text-sm sm:text-xl font-black text-white tracking-tight">
             {balance ? balance.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
           </span>
-          <span className="text-xs font-bold text-blue-400">{balance?.currency || "USD"}</span>
+          <span className="text-[10px] sm:text-xs font-bold text-blue-400">{balance?.currency || "USD"}</span>
         </div>
       </div>
 

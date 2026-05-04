@@ -8,10 +8,16 @@ import { useDerivAuth } from "@/hooks/use-deriv-auth"
 
 // ─── Context Types ─────────────────────────────────────────────────────────────
 
+export interface Balance {
+  amount: number
+  currency: string
+}
+
 interface DerivAPIContextType {
   apiClient: DerivAPIClient | null
   isConnected: boolean
   isAuthorized: boolean
+  balance: Balance | null
   error: string | null
   connectionStatus: ConnectionStatus
   reconnect: () => void
@@ -21,6 +27,7 @@ const DerivAPIContext = createContext<DerivAPIContextType>({
   apiClient: null,
   isConnected: false,
   isAuthorized: false,
+  balance: null,
   error: null,
   connectionStatus: "disconnected",
   reconnect: () => {},
@@ -34,10 +41,12 @@ let globalAPIClient: DerivAPIClient | null = null
 export function DerivAPIProvider({ children }: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false)
   const [isAuthorized, setIsAuthorized] = useState(false)
+  const [balance, setBalance] = useState<Balance | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("disconnected")
 
   const clientRef = useRef<DerivAPIClient | null>(null)
+  const balanceSubIdRef = useRef<string | null>(null)
   const initAttemptRef = useRef(0)
   const isMountedRef = useRef(true)
   const { token, isLoggedIn, activeLoginId } = useDerivAuth()
@@ -46,7 +55,17 @@ export function DerivAPIProvider({ children }: { children: React.ReactNode }) {
     if (!isMountedRef.current) return
     setConnectionStatus(status)
     setIsConnected(status === "connected")
-    if (status !== "connected") setIsAuthorized(false)
+    if (status !== "connected") {
+      setIsAuthorized(false)
+      setBalance(null)
+    }
+  }
+
+  const cleanupSubscriptions = async () => {
+    if (balanceSubIdRef.current && clientRef.current) {
+      try { await clientRef.current.forget(balanceSubIdRef.current) } catch (e) {}
+      balanceSubIdRef.current = null
+    }
   }
 
   const attemptConnection = async (client: DerivAPIClient, tok: string, accountId?: string) => {
@@ -54,6 +73,7 @@ export function DerivAPIProvider({ children }: { children: React.ReactNode }) {
       initAttemptRef.current++
       console.log(`[ProfitHub] Connection attempt ${initAttemptRef.current}`)
 
+      await cleanupSubscriptions()
       await client.connect()
       const account = await client.authorize(tok, accountId || "")
       console.log(`[ProfitHub] Authorized — ${account.loginid} (${account.currency})`)
@@ -62,6 +82,16 @@ export function DerivAPIProvider({ children }: { children: React.ReactNode }) {
         setIsAuthorized(true)
         setError(null)
         initAttemptRef.current = 0
+
+        // Subscribe to balance
+        try {
+          const subId = await client.subscribeBalance((bal) => {
+            setBalance({ amount: bal.balance, currency: bal.currency })
+          })
+          balanceSubIdRef.current = subId
+        } catch (e) {
+          console.error("[ProfitHub] Balance subscription failed:", e)
+        }
       }
     } catch (err: any) {
       console.error("[ProfitHub] Connection/Auth failed:", err)
@@ -124,6 +154,7 @@ export function DerivAPIProvider({ children }: { children: React.ReactNode }) {
         apiClient: clientRef.current,
         isConnected,
         isAuthorized,
+        balance,
         error,
         connectionStatus,
         reconnect,

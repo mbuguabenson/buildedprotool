@@ -42,7 +42,6 @@ async function generatePKCE() {
 export function useDerivAuth() {
   const [token, setToken] = useState<string>("")
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [balance, setBalance] = useState<Balance | null>(null)
   const [accountType, setAccountType] = useState<"Demo" | "Real" | null>(null)
   const [accounts, setAccounts] = useState<Account[]>([])
   const [activeLoginId, setActiveLoginId] = useState<string | null>(null)
@@ -105,16 +104,6 @@ export function useDerivAuth() {
         } catch (e) {
           console.error("[ProfitHub] Failed to fetch accounts:", e)
           setAccounts([{ id: auth.loginid, type: auth.is_virtual ? "Demo" : "Real", currency: auth.currency, token: apiToken }])
-        }
-
-        // Subscribe to balance
-        try {
-          const subId = await client.subscribeBalance((bal) => {
-            setBalance({ amount: bal.balance, currency: bal.currency })
-          })
-          balanceSubIdRef.current = subId
-        } catch (e) {
-          console.error("[ProfitHub] Balance subscription failed:", e)
         }
 
       } catch (err: any) {
