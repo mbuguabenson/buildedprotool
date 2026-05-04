@@ -167,13 +167,25 @@ export function useDerivAuth() {
       const urlParams = new URLSearchParams(window.location.search)
       const code = urlParams.get("code")
       const state = urlParams.get("state")
+      const errorParam = urlParams.get("error")
+      const errorDescription = urlParams.get("error_description")
       
+      if (errorParam) {
+        console.error(`[ProfitHub] ❌ OAuth Error: ${errorParam} - ${errorDescription}`)
+        sessionStorage.removeItem("pkce_code_verifier")
+        sessionStorage.removeItem("oauth_state")
+        window.history.replaceState({}, document.title, window.location.pathname)
+        return
+      }
+
       if (code) {
         const storedState = sessionStorage.getItem("oauth_state")
         const codeVerifier = sessionStorage.getItem("pkce_code_verifier")
 
         if (state !== storedState) {
-          console.error("[ProfitHub] ❌ OAuth State Mismatch!")
+          console.error("[ProfitHub] ❌ OAuth State Mismatch! Possible CSRF attack.")
+          sessionStorage.removeItem("pkce_code_verifier")
+          sessionStorage.removeItem("oauth_state")
           return
         }
 
@@ -193,8 +205,6 @@ export function useDerivAuth() {
           const data = await res.json()
           if (data.access_token) {
             console.log("[ProfitHub] ✅ Token exchange successful")
-            sessionStorage.removeItem("pkce_code_verifier")
-            sessionStorage.removeItem("oauth_state")
             
             // Clean URL
             window.history.replaceState({}, document.title, window.location.pathname)
@@ -205,6 +215,9 @@ export function useDerivAuth() {
           }
         } catch (err) {
           console.error("[ProfitHub] ❌ Token Exchange Failed:", err)
+        } finally {
+          sessionStorage.removeItem("pkce_code_verifier")
+          sessionStorage.removeItem("oauth_state")
         }
       } else {
         // Restore existing session
