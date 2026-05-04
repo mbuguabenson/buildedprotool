@@ -111,7 +111,7 @@ export class DerivAPIClient {
       this.setStatus("connecting")
 
       try {
-        let wsUrl = DERIV_API.PUBLIC_WS
+        let wsUrl: string = DERIV_API.PUBLIC_WS
 
         if (this.config.token && this.config.accountId) {
           try {
