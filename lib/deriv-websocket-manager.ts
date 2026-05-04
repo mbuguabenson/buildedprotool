@@ -43,7 +43,10 @@ export class DerivWebSocketManager {
   >()
 
   // subscriptionId (server UUID) → tick callback
-  private tickSubscriptions = new Map<string, (tick: TickData) => void>()
+  private tickSubscriptions = new Map<string, ((tick: TickData) => void)[]>()
+  
+  // symbol → subscriptionId (server UUID)
+  private activeSymbolToId = new Map<string, string>()
 
   // user-facing subscriptionId alias → server UUID
   private subscriptionAliases = new Map<string, string>()
@@ -232,15 +235,16 @@ export class DerivWebSocketManager {
 
     // Route tick subscriptions by server-assigned subscription UUID
     if (msg.msg_type === "tick" && msg.subscription?.id) {
-      const cb = this.tickSubscriptions.get(msg.subscription.id)
-      if (cb && msg.tick) {
+      const callbacks = this.tickSubscriptions.get(msg.subscription.id)
+      if (callbacks && callbacks.length > 0 && msg.tick) {
         const quote = msg.tick.quote
-        cb({
+        const tickData = {
           quote,
           lastDigit: this.extractLastDigit(quote),
           epoch: msg.tick.epoch,
           symbol: msg.tick.symbol,
-        })
+        }
+        callbacks.forEach(cb => cb(tickData))
       }
     }
 
@@ -273,33 +277,72 @@ export class DerivWebSocketManager {
   }
 
   public async subscribeTicks(symbol: string, callback: (tick: TickData) => void): Promise<string> {
-    // Use request() so we get the server's subscription.id back reliably
-    const response = await this.request({ ticks: symbol, subscribe: 1 })
-
-    const serverSubId: string = response.subscription?.id
-    if (!serverSubId) throw new Error("No subscription ID returned from server")
-
-    // Register callback keyed by server UUID
-    this.tickSubscriptions.set(serverSubId, callback)
-
-    // Also handle the initial tick if returned in the subscription response
-    if (response.tick) {
-      const quote = response.tick.quote
-      callback({
-        quote,
-        lastDigit: this.extractLastDigit(quote),
-        epoch: response.tick.epoch,
-        symbol: response.tick.symbol,
-      })
+    // Check if we already have an active subscription for this symbol
+    if (this.activeSymbolToId.has(symbol)) {
+      const existingId = this.activeSymbolToId.get(symbol)!
+      const callbacks = this.tickSubscriptions.get(existingId) || []
+      callbacks.push(callback)
+      this.tickSubscriptions.set(existingId, callbacks)
+      console.log(`[ProfitHub] Reusing active subscription for ${symbol} (${existingId})`)
+      return existingId
     }
 
-    console.log(`[ProfitHub] Subscribed to ${symbol} (${serverSubId})`)
-    return serverSubId
+    try {
+      // Use request() so we get the server's subscription.id back reliably
+      const response = await this.request({ ticks: symbol, subscribe: 1 })
+
+      const serverSubId: string = response.subscription?.id
+      if (!serverSubId) throw new Error("No subscription ID returned from server")
+
+      // Register callback keyed by server UUID
+      this.tickSubscriptions.set(serverSubId, [callback])
+      this.activeSymbolToId.set(symbol, serverSubId)
+
+      // Also handle the initial tick if returned in the subscription response
+      if (response.tick) {
+        const quote = response.tick.quote
+        callback({
+          quote,
+          lastDigit: this.extractLastDigit(quote),
+          epoch: response.tick.epoch,
+          symbol: response.tick.symbol,
+        })
+      }
+
+      console.log(`[ProfitHub] Subscribed to ${symbol} (${serverSubId})`)
+      return serverSubId
+    } catch (err: any) {
+      if (err.message?.includes("AlreadySubscribed") || err.code === "AlreadySubscribed") {
+        console.warn(`[ProfitHub] Caught AlreadySubscribed for ${symbol}. Attempting recovery by forgetting all ticks.`)
+        await this.request({ forget_all: ["ticks"] }).catch(() => {})
+        this.activeSymbolToId.clear()
+        this.tickSubscriptions.clear()
+        
+        // Retry subscription once
+        const retryRes = await this.request({ ticks: symbol, subscribe: 1 })
+        const serverSubId: string = retryRes.subscription?.id
+        if (serverSubId) {
+          this.tickSubscriptions.set(serverSubId, [callback])
+          this.activeSymbolToId.set(symbol, serverSubId)
+          return serverSubId
+        }
+      }
+      throw err
+    }
   }
 
   public async unsubscribe(subscriptionId: string): Promise<void> {
     if (!subscriptionId) return
     const serverSubId = this.subscriptionAliases.get(subscriptionId) ?? subscriptionId
+    
+    // Clean up activeSymbolToId
+    for (const [sym, id] of this.activeSymbolToId.entries()) {
+      if (id === serverSubId) {
+        this.activeSymbolToId.delete(sym)
+        break
+      }
+    }
+
     this.tickSubscriptions.delete(serverSubId)
     this.subscriptionAliases.delete(subscriptionId)
     try {
@@ -312,13 +355,14 @@ export class DerivWebSocketManager {
   public async unsubscribeAll(): Promise<void> {
     this.tickSubscriptions.clear()
     this.subscriptionAliases.clear()
+    this.activeSymbolToId.clear()
     try {
       await this.request({ forget_all: ["ticks", "candles"] }, 5_000)
     } catch (_) {}
   }
 
   public async getActiveSymbols(): Promise<any[]> {
-    const response = await this.request({ active_symbols: "brief" })
+    const response = await this.request({ active_symbols: "brief", product_type: "basic" })
     return response.active_symbols ?? []
   }
 

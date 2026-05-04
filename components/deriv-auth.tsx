@@ -50,10 +50,10 @@ export function DerivAuth({ theme = "dark" }: DerivAuthProps) {
       <div className="flex flex-col items-end mr-1 sm:mr-2">
         <span className="text-[8px] sm:text-[10px] text-gray-500 uppercase tracking-widest font-bold">Balance</span>
         <div className="flex items-center gap-1 sm:gap-2">
-          <span className="text-sm sm:text-xl font-black text-white tracking-tight">
+          <span className={`text-sm sm:text-xl font-black tracking-tight ${theme === "dark" ? "text-white" : "text-gray-900"}`}>
             {balance ? balance.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
           </span>
-          <span className="text-[10px] sm:text-xs font-bold text-blue-400">{balance?.currency || "USD"}</span>
+          <span className="text-[10px] sm:text-xs font-bold text-blue-500">{balance?.currency || "USD"}</span>
         </div>
       </div>
 

@@ -56,6 +56,7 @@ export class DerivAPIClient {
     { resolve: (value: any) => void; reject: (reason: any) => void; timer: ReturnType<typeof setTimeout> }
   >()
   private subscriptions = new Map<string, (data: any) => void>()
+  private activeTickSubs = new Map<string, string>() // symbol -> subId
   private config: DerivAPIConfig
   private isAuthorised = false
   private messageQueue: any[] = []
@@ -261,18 +262,46 @@ export class DerivAPIClient {
   // ── WebSocket Methods ────────────────────────────────────────────────────────
 
   async getActiveSymbols(): Promise<ActiveSymbol[]> {
-    const res = await this.send({ active_symbols: "brief" })
+    const res = await this.send({ active_symbols: "brief", product_type: "basic" })
     return res.active_symbols || []
   }
 
   async subscribeTicks(symbol: string, cb: (tick: any) => void): Promise<string> {
-    const res = await this.send({ ticks: symbol, subscribe: 1 })
-    if (res.error) throw new Error(res.error.message)
-    const subId = res.subscription.id
-    this.subscriptions.set(subId, (msg) => {
-      if (msg.tick) cb(msg.tick)
-    })
-    return subId
+    if (this.activeTickSubs.has(symbol)) {
+      const existingId = this.activeTickSubs.get(symbol)!
+      // For DerivAPIClient, we just override the single callback for simplicity,
+      // or we can wrap it. The previous behavior was 1 cb per subId.
+      this.subscriptions.set(existingId, (msg) => {
+        if (msg.tick) cb(msg.tick)
+      })
+      return existingId
+    }
+
+    try {
+      const res = await this.send({ ticks: symbol, subscribe: 1 })
+      if (res.error) throw new Error(res.error.message)
+      const subId = res.subscription.id
+      this.activeTickSubs.set(symbol, subId)
+      this.subscriptions.set(subId, (msg) => {
+        if (msg.tick) cb(msg.tick)
+      })
+      return subId
+    } catch (err: any) {
+      if (err.message?.includes("AlreadySubscribed") || err.code === "AlreadySubscribed") {
+        console.warn(`[ProfitHub] Caught AlreadySubscribed for ${symbol} in APIClient. Retrying after forget.`)
+        await this.send({ forget_all: ["ticks"] }).catch(() => {})
+        this.activeTickSubs.clear()
+        const retryRes = await this.send({ ticks: symbol, subscribe: 1 })
+        if (retryRes.error) throw new Error(retryRes.error.message)
+        const subId = retryRes.subscription.id
+        this.activeTickSubs.set(symbol, subId)
+        this.subscriptions.set(subId, (msg) => {
+          if (msg.tick) cb(msg.tick)
+        })
+        return subId
+      }
+      throw err
+    }
   }
 
   async subscribeBalance(cb: (balance: any) => void): Promise<string> {
@@ -288,12 +317,19 @@ export class DerivAPIClient {
   async forget(subscriptionId: string): Promise<void> {
     await this.send({ forget: subscriptionId })
     this.subscriptions.delete(subscriptionId)
+    for (const [sym, id] of this.activeTickSubs.entries()) {
+      if (id === subscriptionId) {
+        this.activeTickSubs.delete(sym)
+        break
+      }
+    }
   }
 
   async forgetAll(...types: string[]): Promise<void> {
     await this.send({ forget_all: types })
-    // Clear local mapping for these types if possible
-    // For simplicity, we'll let the next sub overwrite or just keep as is
+    if (types.includes("ticks") || types.length === 0) {
+      this.activeTickSubs.clear()
+    }
   }
 
   async getContractsFor(symbol: string): Promise<any[]> {
