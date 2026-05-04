@@ -567,9 +567,6 @@ export default function DerivAnalysisApp() {
               <TabsContent value="super-signals" className="mt-0">
                 {analysis && (
                   <SuperSignalsTab
-                    analysis={analysis}
-                    currentDigit={currentDigit}
-                    recentDigits={recent100Digits}
                     theme={theme}
                   />
                 )}

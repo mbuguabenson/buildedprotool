@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 
 interface LiveTickerProps {
-  price: number | undefined
+  price: number | null
   digit: number | null
   theme?: "light" | "dark"
   symbol?: string
