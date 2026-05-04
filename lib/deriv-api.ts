@@ -290,6 +290,49 @@ export class DerivAPIClient {
     this.subscriptions.delete(subscriptionId)
   }
 
+  async forgetAll(...types: string[]): Promise<void> {
+    await this.send({ forget_all: types })
+    // Clear local mapping for these types if possible
+    // For simplicity, we'll let the next sub overwrite or just keep as is
+  }
+
+  async getContractsFor(symbol: string): Promise<any[]> {
+    const res = await this.send({ contracts_for: symbol })
+    return res.contracts_for?.available || []
+  }
+
+  async getProposal(params: any): Promise<any> {
+    const res = await this.send({ proposal: 1, ...params })
+    return res.proposal
+  }
+
+  async getTickHistory(symbol: string, count: number): Promise<any> {
+    const res = await this.send({
+      ticks_history: symbol,
+      end: "latest",
+      count,
+      style: "ticks",
+    })
+    return res.history || { prices: [] }
+  }
+
+  async buyContract(proposalId: string, price: number): Promise<any> {
+    const res = await this.send({ buy: proposalId, price })
+    return res.buy
+  }
+
+  async subscribeProposalOpenContract(contractId: number, cb: (contract: any) => void): Promise<string> {
+    const res = await this.send({ proposal_open_contract: 1, contract_id: contractId, subscribe: 1 })
+    if (res.error) throw new Error(res.error.message)
+    const subId = res.subscription?.id
+    if (subId) {
+      this.subscriptions.set(subId, (msg) => {
+        if (msg.proposal_open_contract) cb(msg.proposal_open_contract)
+      })
+    }
+    return subId || ""
+  }
+
   async disconnect() {
     if (this.ws) {
       this.ws.close()

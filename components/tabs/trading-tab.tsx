@@ -71,7 +71,7 @@ export function TradingTab({ theme: propTheme }: TradingTabProps) {
         .then(() => {
           loadMarketsAndSymbols()
         })
-        .catch((err) => {
+        .catch((err: any) => {
           console.log("[v0] ForgetAll error (non-critical):", err)
           loadMarketsAndSymbols()
         })

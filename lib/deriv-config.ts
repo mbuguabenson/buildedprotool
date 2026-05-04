@@ -35,3 +35,11 @@ export const DERIV_PLATFORMS = {
   DBOT: "https://app.deriv.com/bot",
   SMARTTRADER: "https://smarttrader.deriv.com",
 } as const
+
+export const DERIV_REPOS = {
+  MAIN_APP: { name: "deriv-app", url: "https://github.com/deriv-com/deriv-app" },
+  DBOT: { name: "deriv-bot", url: "https://github.com/deriv-com/deriv-bot" },
+  SMARTTRADER: { name: "deriv-smarttrader", url: "https://github.com/deriv-com/deriv-smarttrader" },
+  COPYTRADING: { name: "copy-trading", url: "https://github.com/deriv-com/copy-trading" },
+  API: { name: "deriv-api", url: "https://github.com/deriv-com/deriv-api" },
+} as const

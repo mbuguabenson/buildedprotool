@@ -17,14 +17,14 @@ interface AutomatedTradesTabProps {
 }
 
 export function AutomatedTradesTab({ theme = "dark" }: AutomatedTradesTabProps) {
-  const { apiClient, isConnected, isAuthorized, balance } = useDerivAPI()
+  const { apiClient, isConnected, isAuthorized, balance: globalBalance } = useDerivAPI()
   const { accounts, activeLoginId } = useDerivAuth()
 
   const activeAccount = accounts.find(a => a.id === activeLoginId)
   const accountInfo = activeAccount ? {
     loginid: activeAccount.id,
     currency: activeAccount.currency,
-    balance: balance?.amount || 0
+    balance: globalBalance?.amount || 0
   } : null
   const [bot, setBot] = useState<AutomatedTradesBot | null>(null)
   const [isRunning, setIsRunning] = useState(false)

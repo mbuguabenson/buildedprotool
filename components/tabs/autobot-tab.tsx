@@ -104,6 +104,7 @@ const calculateSuggestedMartingale = (strategy: BotStrategy, stake: number): num
     OVER1_UNDER8: 1.8,
     UNDER6: 1.85,
     DIFFERS: 9.0, // DIFFERS has much higher payout
+    SUPER_DIFFERS: 9.0,
     OVER_UNDER_ADVANCED: 1.85,
   }
 
@@ -559,12 +560,15 @@ export function AutoBotTab({ theme = "dark", symbol }: AutoBotTabProps) {
 
       setBotStates((prev) =>
         new Map(prev).set(strategy, {
+          isRunning: true,
+          totalRuns: 0,
           wins: 0,
           losses: 0,
           profitLoss: 0,
-          isAnalyzing: true,
-          isTrading: false,
-          lastTrade: null,
+          profitLossPercent: 0,
+          currentStake: autoBotConfig.initialStake,
+          consecutiveLosses: 0,
+          trades: [],
         }),
       )
 
@@ -574,29 +578,38 @@ export function AutoBotTab({ theme = "dark", symbol }: AutoBotTabProps) {
         console.log(`[v0] ${strategy} bot state updated:`, state)
         setBotStates((prev) => new Map(prev).set(strategy, state))
 
-        if (state.isTrading) {
-          setBotStatus((prev) => new Map(prev).set(strategy, "Signal Found - Trading"))
-        }
+        setBotStates((prev) => new Map(prev).set(strategy, state))
 
-        if (state.lastTrade) {
-          const logEntry: TradeLogEntry = {
-            id: `${strategy}-${Date.now()}`,
-            time: new Date(),
-            strategy: BOT_STRATEGIES.find((s) => s.id === strategy)?.name || strategy,
-            contract: state.lastTrade.contractType || "N/A",
-            predicted: state.lastTrade.prediction || "N/A",
-            entry: state.lastTrade.entrySpot?.toString() || "N/A",
-            exit: state.lastTrade.exitSpot?.toString() || "N/A",
-            stake: state.lastTrade.stake || 0,
-            result: state.lastTrade.isWin ? "win" : "loss",
-            profitLoss: state.lastTrade.profit || 0,
-          }
-          setTradeLogs((prev) => [logEntry, ...prev.slice(0, 99)])
+        setBotStatus((prev) => new Map(prev).set(strategy, state.isRunning ? "Running" : "Stopped"))
 
-          if (state.lastTrade.isWin && state.profitLoss >= (botConfig.tpPercent / 100) * botConfig.initialStake) {
-            setTpAmount(state.lastTrade.profit || 0)
-            setShowTPPopup(true)
-          }
+        if (state.trades && state.trades.length > 0) {
+          const lastTrade = state.trades[0]
+          
+          // Check if it's a new trade by checking tradeLogs
+          setTradeLogs((prevLogs) => {
+            const isNew = !prevLogs.find(log => log.id === lastTrade.id)
+            if (!isNew) return prevLogs
+            
+            const logEntry: TradeLogEntry = {
+              id: lastTrade.id,
+              time: new Date(lastTrade.timestamp),
+              strategy: BOT_STRATEGIES.find((s) => s.id === strategy)?.name || strategy,
+              contract: lastTrade.contract,
+              predicted: lastTrade.prediction,
+              entry: "N/A", // Not provided by AutoBot TradeLog currently
+              exit: "N/A",  // Not provided by AutoBot TradeLog currently
+              stake: lastTrade.stake,
+              result: lastTrade.result === "WIN" ? "win" : "loss",
+              profitLoss: lastTrade.profitLoss,
+            }
+            
+            if (lastTrade.result === "WIN" && state.profitLoss >= (botConfig.tpPercent / 100) * botConfig.initialStake) {
+              setTpAmount(lastTrade.profitLoss)
+              setShowTPPopup(true)
+            }
+            
+            return [logEntry, ...prevLogs.slice(0, 99)]
+          })
         }
       })
 
@@ -1015,7 +1028,7 @@ export function AutoBotTab({ theme = "dark", symbol }: AutoBotTabProps) {
                     </div>
                     <div className="col-span-2 text-center">
                       <Badge className="bg-blue-500/20 text-blue-400 text-xs">
-                        {botState.isAnalyzing ? "Analyzing..." : botState.isTrading ? "Placing Trade..." : "Monitoring"}
+                        {botStatus.get(strategy.id) || (botState.isRunning ? "Running" : "Stopped")}
                       </Badge>
                     </div>
                   </div>
