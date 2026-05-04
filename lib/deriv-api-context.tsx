@@ -40,7 +40,7 @@ export function DerivAPIProvider({ children }: { children: React.ReactNode }) {
   const clientRef = useRef<DerivAPIClient | null>(null)
   const initAttemptRef = useRef(0)
   const isMountedRef = useRef(true)
-  const { token, isLoggedIn } = useDerivAuth()
+  const { token, isLoggedIn, activeLoginId } = useDerivAuth()
 
   const safeSetStatus = (status: ConnectionStatus) => {
     if (!isMountedRef.current) return
@@ -49,13 +49,13 @@ export function DerivAPIProvider({ children }: { children: React.ReactNode }) {
     if (status !== "connected") setIsAuthorized(false)
   }
 
-  const attemptConnection = async (client: DerivAPIClient, tok: string) => {
+  const attemptConnection = async (client: DerivAPIClient, tok: string, accountId?: string) => {
     try {
       initAttemptRef.current++
       console.log(`[ProfitHub] Connection attempt ${initAttemptRef.current}`)
 
       await client.connect()
-      const account = await client.authorize(tok)
+      const account = await client.authorize(tok, accountId || "")
       console.log(`[ProfitHub] Authorized — ${account.loginid} (${account.currency})`)
 
       if (isMountedRef.current) {
@@ -80,7 +80,7 @@ export function DerivAPIProvider({ children }: { children: React.ReactNode }) {
     if (!clientRef.current || !token) return
     initAttemptRef.current = 0
     setError(null)
-    attemptConnection(clientRef.current, token)
+    attemptConnection(clientRef.current, token, activeLoginId || "")
   }
 
   useEffect(() => {
@@ -109,7 +109,7 @@ export function DerivAPIProvider({ children }: { children: React.ReactNode }) {
 
       clientRef.current = globalAPIClient
 
-      attemptConnection(globalAPIClient, token)
+      attemptConnection(globalAPIClient, token, activeLoginId || "")
     }
 
     return () => {

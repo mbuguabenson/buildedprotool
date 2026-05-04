@@ -1,12 +1,8 @@
-"use client"
-
+import { useState } from "react"
 import { useDerivAuth } from "@/hooks/use-deriv-auth"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { ApprovalModal } from "@/components/approval-modal"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { User, LogIn, LogOut, UserPlus } from "lucide-react"
+import { Lock, LogOut, ChevronDown, ChevronRight, User } from "lucide-react"
+import { AccountSwitcherModal } from "./account-switcher-modal"
 
 interface DerivAuthProps {
   theme?: "light" | "dark"
@@ -22,135 +18,82 @@ export function DerivAuth({ theme = "dark" }: DerivAuthProps) {
     accounts,
     switchAccount,
     activeLoginId,
+    resetDemoBalance
   } = useDerivAuth()
 
-  const openDerivAccount = () => {
-    window.open("https://app.deriv.com/account", "_blank", "noopener,noreferrer")
-  }
+  const [isSwitcherOpen, setIsSwitcherOpen] = useState(false)
 
-  const createDerivAccount = () => {
-    window.open("https://track.deriv.com/_1mHiO0UpCX6NhxmBqQyZL2Nd7ZgqdRLk/1/", "_blank", "noopener,noreferrer")
+  if (!isLoggedIn) {
+    return (
+      <div className="flex items-center gap-3">
+        <Button
+          onClick={() => window.open("https://track.deriv.com/_1mHiO0UpCX6NhxmBqQyZL2Nd7ZgqdRLk/1/", "_blank")}
+          variant="outline"
+          className="hidden sm:flex border-blue-500/30 text-blue-400 hover:bg-blue-500/10 font-bold px-4 py-2 rounded-xl transition-all"
+        >
+          Sign Up
+        </Button>
+        <Button
+          onClick={login}
+          className="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white font-bold px-6 py-2 rounded-xl shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all hover:scale-105 active:scale-95 flex items-center gap-2 group"
+        >
+          <Lock className="h-4 w-4 group-hover:rotate-12 transition-transform" />
+          Login 2.0
+        </Button>
+      </div>
+    )
   }
 
   return (
-    <>
-      {!isLoggedIn && (
+    <div className="flex items-center gap-4">
+      {/* Balance Display */}
+      <div className="hidden md:flex flex-col items-end mr-2">
+        <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Balance</span>
         <div className="flex items-center gap-2">
-          <Button
-            onClick={createDerivAccount}
-            size="sm"
-            className={`text-xs sm:text-sm ${
-              theme === "dark"
-                ? "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
-                : "bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white"
-            }`}
-          >
-            <UserPlus className="h-4 w-4 mr-1" />
-            Create Account
-          </Button>
-          <Button
-            onClick={login}
-            size="sm"
-            className={`text-xs sm:text-sm ${
-              theme === "dark" ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"
-            }`}
-          >
-            <LogIn className="h-4 w-4 mr-1" />
-            Login 2.0
-          </Button>
+          <span className="text-xl font-black text-white tracking-tight">
+            {balance ? balance.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+          </span>
+          <span className="text-xs font-bold text-blue-400">{balance?.currency || "USD"}</span>
         </div>
-      )}
+      </div>
 
-      {isLoggedIn && (
-        <div className="flex items-center space-x-2 sm:space-x-3">
-          <div
-            className={`flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-md border ${
-              theme === "dark"
-                ? "bg-gray-800/50 border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.2)]"
-                : "bg-gray-100 border-gray-300"
-            }`}
-          >
-            <div className="flex items-center gap-1.5">
-              <span className={`text-xs sm:text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
-                Type:
-              </span>
-              {accountType && (
-                <Badge
-                  className={
-                    accountType === "Real"
-                      ? "bg-green-600 text-white hover:bg-green-700 text-xs sm:text-sm h-5"
-                      : "bg-yellow-500 text-black hover:bg-yellow-600 text-xs sm:text-sm h-5"
-                  }
-                >
-                  {accountType}
-                </Badge>
-              )}
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <span className={`text-xs sm:text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
-                Account:
-              </span>
-              <span
-                className={`text-xs sm:text-sm font-mono font-semibold ${theme === "dark" ? "text-white" : "text-gray-900"}`}
-              >
-                {activeLoginId}
-              </span>
-            </div>
-
-            {balance && (
-              <div className="flex items-center gap-1.5">
-                <span className={`text-xs sm:text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
-                  Balance:
-                </span>
-                <span
-                  className={`text-xs sm:text-sm font-semibold ${theme === "dark" ? "text-green-400" : "text-green-600"}`}
-                >
-                  {balance.amount.toFixed(2)} {balance.currency}
-                </span>
-              </div>
-            )}
-
-            {accounts.length > 1 && (
-              <Select value={activeLoginId || ""} onValueChange={(val) => {
-                const acc = accounts.find(a => a.id === val);
-                if (acc && acc.token) switchAccount(acc.id, acc.token);
-              }}>
-                <SelectTrigger
-                  className={`w-24 sm:w-32 h-7 text-xs sm:text-sm ${theme === "dark" ? "bg-gray-700 text-white border-blue-500/30" : "bg-white text-gray-900"}`}
-                >
-                  <SelectValue placeholder="Switch" />
-                </SelectTrigger>
-                <SelectContent className={theme === "dark" ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
-                  {accounts.map((acc) => (
-                    <SelectItem key={acc.id} value={acc.id} className="text-xs sm:text-sm">
-                      {acc.id} ({acc.type})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-
-          <Avatar
-            className="cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all w-9 h-9"
-            onClick={openDerivAccount}
-            title="Open Deriv Account"
-          >
-            <AvatarImage
-              src={`https://ui-avatars.com/api/?name=${activeLoginId || "User"}&background=3b82f6&color=fff`}
-            />
-            <AvatarFallback>
-              <User size={16} />
-            </AvatarFallback>
-          </Avatar>
-
-          <Button onClick={logout} size="sm" className="bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm h-9">
-            <LogOut className="h-4 w-4 mr-1" />
-            Logout
-          </Button>
+      {/* Account Info Badge / Switcher Trigger */}
+      <button
+        onClick={() => setIsSwitcherOpen(true)}
+        className={`
+          flex items-center gap-3 px-4 py-2 rounded-2xl border transition-all hover:scale-[1.02] active:scale-[0.98]
+          ${accountType === "Demo"
+            ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-500 hover:bg-yellow-500/20 shadow-[0_0_20px_rgba(234,179,8,0.05)]"
+            : "bg-green-500/10 border-green-500/20 text-green-500 hover:bg-green-500/20 shadow-[0_0_20px_rgba(34,197,94,0.05)]"
+          }
+        `}
+      >
+        <div className="relative">
+          <div className={`w-2.5 h-2.5 rounded-full ${accountType === "Demo" ? "bg-yellow-500" : "bg-green-500"} animate-pulse`} />
+          <div className={`absolute -inset-1 blur-sm opacity-50 ${accountType === "Demo" ? "bg-yellow-500" : "bg-green-500"}`} />
         </div>
-      )}
-    </>
+        
+        <div className="flex flex-col items-start leading-none">
+          <span className="text-[10px] font-bold opacity-70 uppercase tracking-tighter mb-0.5">{accountType} Account</span>
+          <span className="text-sm font-bold tracking-tight font-mono">{activeLoginId}</span>
+        </div>
+        
+        <ChevronDown className="h-4 w-4 opacity-50 ml-1" />
+      </button>
+
+      {/* Switcher Modal */}
+      <AccountSwitcherModal
+        open={isSwitcherOpen}
+        onOpenChange={setIsSwitcherOpen}
+        accounts={accounts}
+        activeLoginId={activeLoginId}
+        onSwitch={(id, token) => {
+          switchAccount(id, token)
+          setIsSwitcherOpen(false)
+        }}
+        onResetDemo={resetDemoBalance}
+        onLogout={logout}
+      />
+    </div>
   )
 }

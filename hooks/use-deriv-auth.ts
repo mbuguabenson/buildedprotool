@@ -49,6 +49,7 @@ export function useDerivAuth() {
   const [showTokenModal, setShowTokenModal] = useState(false)
 
   const clientRef = useRef<DerivAPIClient | null>(null)
+  const balanceSubIdRef = useRef<string | null>(null)
 
   const _initClient = useCallback((): DerivAPIClient => {
     if (!clientRef.current) {
@@ -60,6 +61,10 @@ export function useDerivAuth() {
   }, [])
 
   const _disconnectClient = useCallback(async () => {
+    if (balanceSubIdRef.current && clientRef.current) {
+      try { await clientRef.current.forget(balanceSubIdRef.current) } catch (e) {}
+      balanceSubIdRef.current = null
+    }
     if (clientRef.current) {
       await clientRef.current.disconnect()
       clientRef.current = null
@@ -88,8 +93,30 @@ export function useDerivAuth() {
         localStorage.setItem("deriv_api_token", apiToken)
         localStorage.setItem("deriv_account_id", auth.loginid)
 
-        // Mock accounts list for now as we only have the primary token/acct from OAuth
-        setAccounts([{ id: auth.loginid, type: auth.is_virtual ? "Demo" : "Real", currency: auth.currency, token: apiToken }])
+        // Fetch real accounts list
+        try {
+          const restAccounts = await client.fetchAccounts()
+          setAccounts(restAccounts.map(acc => ({
+            id: acc.account_id,
+            type: acc.account_type === "demo" ? "Demo" : "Real",
+            currency: acc.currency,
+            token: apiToken
+          })))
+        } catch (e) {
+          console.error("[ProfitHub] Failed to fetch accounts:", e)
+          setAccounts([{ id: auth.loginid, type: auth.is_virtual ? "Demo" : "Real", currency: auth.currency, token: apiToken }])
+        }
+
+        // Subscribe to balance
+        try {
+          const subId = await client.subscribeBalance((bal) => {
+            setBalance({ amount: bal.balance, currency: bal.currency })
+          })
+          balanceSubIdRef.current = subId
+        } catch (e) {
+          console.error("[ProfitHub] Balance subscription failed:", e)
+        }
+
       } catch (err: any) {
         console.error("[ProfitHub] ❌ Auth failed:", err)
         setShowTokenModal(true)
@@ -97,6 +124,16 @@ export function useDerivAuth() {
     },
     [_initClient, _disconnectClient],
   )
+
+  const resetDemoBalance = async () => {
+    if (!activeLoginId || !clientRef.current || accountType !== "Demo") return
+    try {
+      await clientRef.current.resetDemoBalance(activeLoginId)
+      console.log("[ProfitHub] ✅ Demo balance reset successful")
+    } catch (e) {
+      console.error("[ProfitHub] ❌ Reset failed:", e)
+    }
+  }
 
   const login = async () => {
     const { codeVerifier, codeChallenge, state } = await generatePKCE()
@@ -173,8 +210,6 @@ export function useDerivAuth() {
             // Clean URL
             window.history.replaceState({}, document.title, window.location.pathname)
             
-            // The new API v1 doesn't return account list in token exchange usually
-            // We'll need to fetch it or just use the token
             connectWithToken(data.access_token)
           } else {
             throw new Error(data.error || "Token exchange failed")
@@ -210,6 +245,7 @@ export function useDerivAuth() {
     setShowTokenModal,
     login,
     logout,
+    resetDemoBalance,
     switchAccount: (loginId: string, token: string) => connectWithToken(token, loginId),
   }
 }

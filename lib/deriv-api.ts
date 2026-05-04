@@ -179,7 +179,8 @@ export class DerivAPIClient {
       this.pendingRequests.delete(msg.req_id)
     }
 
-    if (msg.msg_type === "tick" && msg.subscription?.id) {
+    // Handle streaming data (ticks, balance, etc)
+    if (msg.subscription?.id) {
       const cb = this.subscriptions.get(msg.subscription.id)
       if (cb) cb(msg)
     }
@@ -193,7 +194,7 @@ export class DerivAPIClient {
       const timer = setTimeout(() => {
         if (this.pendingRequests.has(req_id)) {
           this.pendingRequests.delete(req_id)
-          reject(new Error("Timeout"))
+          reject(new Error(`Request timeout (${request.msg_type || "unknown"})`))
         }
       }, 30000)
 
@@ -207,19 +208,57 @@ export class DerivAPIClient {
     })
   }
 
-  async authorize(token: string, accountId: string): Promise<AuthorizeResponse> {
+  async authorize(token: string, accountId: string = ""): Promise<AuthorizeResponse> {
     this.config.token = token
     this.config.accountId = accountId
     await this.disconnect()
     await this.connect()
+    
+    // In new API, we don't have a specific 'authorize' WS call usually
+    // we use the OTP connection which is already authorized.
+    // However, we might want to fetch account details via REST here.
     return {
       loginid: accountId,
       balance: 0,
       currency: "USD",
-      is_virtual: accountId.startsWith("VRT") || accountId.startsWith("DOT"),
+      is_virtual: (accountId || "").startsWith("VRT") || (accountId || "").startsWith("DOT"),
       email: "",
     }
   }
+
+  // ── REST Methods ─────────────────────────────────────────────────────────────
+
+  async fetchAccounts(): Promise<any[]> {
+    if (!this.config.token) throw new Error("No token for REST call")
+    
+    const response = await fetch(`${DERIV_API.REST_BASE}/trading/v1/options/accounts`, {
+      headers: {
+        "Deriv-App-ID": this.config.appId,
+        Authorization: `Bearer ${this.config.token}`,
+      },
+    })
+
+    if (!response.ok) throw new Error("Failed to fetch accounts")
+    const { data } = await response.json()
+    return data || []
+  }
+
+  async resetDemoBalance(accountId: string): Promise<any> {
+    if (!this.config.token) throw new Error("No token for REST call")
+
+    const response = await fetch(`${DERIV_API.REST_BASE}/trading/v1/options/accounts/${accountId}/reset-demo-balance`, {
+      method: "POST",
+      headers: {
+        "Deriv-App-ID": this.config.appId,
+        Authorization: `Bearer ${this.config.token}`,
+      },
+    })
+
+    if (!response.ok) throw new Error("Failed to reset balance")
+    return await response.json()
+  }
+
+  // ── WebSocket Methods ────────────────────────────────────────────────────────
 
   async getActiveSymbols(): Promise<ActiveSymbol[]> {
     const res = await this.send({ active_symbols: "brief" })
@@ -228,11 +267,27 @@ export class DerivAPIClient {
 
   async subscribeTicks(symbol: string, cb: (tick: any) => void): Promise<string> {
     const res = await this.send({ ticks: symbol, subscribe: 1 })
+    if (res.error) throw new Error(res.error.message)
     const subId = res.subscription.id
     this.subscriptions.set(subId, (msg) => {
       if (msg.tick) cb(msg.tick)
     })
     return subId
+  }
+
+  async subscribeBalance(cb: (balance: any) => void): Promise<string> {
+    const res = await this.send({ balance: 1, subscribe: 1 })
+    if (res.error) throw new Error(res.error.message)
+    const subId = res.subscription.id
+    this.subscriptions.set(subId, (msg) => {
+      if (msg.balance) cb(msg.balance)
+    })
+    return subId
+  }
+
+  async forget(subscriptionId: string): Promise<void> {
+    await this.send({ forget: subscriptionId })
+    this.subscriptions.delete(subscriptionId)
   }
 
   async disconnect() {
