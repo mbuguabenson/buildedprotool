@@ -177,34 +177,7 @@ export default function DerivAnalysisApp() {
             </div>
 
             <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 flex-wrap justify-end">
-              <Button
-                asChild
-                className={`text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 font-bold h-7 sm:h-9 ${
-                  theme === "dark"
-                    ? "bg-gradient-to-r from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800 text-white shadow-[0_0_15px_rgba(239,68,68,0.5)]"
-                    : "bg-gradient-to-r from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800 text-white shadow-lg"
-                }`}
-                title="Open Deriv Account"
-              >
-                <a
-                  href="https://track.deriv.com/_1mHiO0UpCX6NhxmBqQyZL2Nd7ZgqdRLk/1/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="sm:w-5 sm:h-5"
-                  >
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
-                  </svg>
-                  <span className="hidden sm:inline text-xs sm:text-sm">Deriv</span>
-                </a>
-              </Button>
+
 
               <DerivAuth theme={theme} />
 

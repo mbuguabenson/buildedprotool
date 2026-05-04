@@ -15,14 +15,10 @@ interface DerivAuthProps {
 export function DerivAuth({ theme = "dark" }: DerivAuthProps) {
   const {
     isLoggedIn,
-    showApprovalModal,
-    handleApproval,
-    cancelApproval,
-    requestLogin,
+    login,
     logout,
     balance,
     accountType,
-    accountCode,
     accounts,
     switchAccount,
     activeLoginId,
@@ -38,8 +34,6 @@ export function DerivAuth({ theme = "dark" }: DerivAuthProps) {
 
   return (
     <>
-      <ApprovalModal open={showApprovalModal} onApprove={handleApproval} onCancel={cancelApproval} />
-
       {!isLoggedIn && (
         <div className="flex items-center gap-2">
           <Button
@@ -55,14 +49,14 @@ export function DerivAuth({ theme = "dark" }: DerivAuthProps) {
             Create Account
           </Button>
           <Button
-            onClick={requestLogin}
+            onClick={login}
             size="sm"
             className={`text-xs sm:text-sm ${
               theme === "dark" ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"
             }`}
           >
             <LogIn className="h-4 w-4 mr-1" />
-            Login
+            Login 2.0
           </Button>
         </div>
       )}
@@ -100,7 +94,7 @@ export function DerivAuth({ theme = "dark" }: DerivAuthProps) {
               <span
                 className={`text-xs sm:text-sm font-mono font-semibold ${theme === "dark" ? "text-white" : "text-gray-900"}`}
               >
-                {accountCode}
+                {activeLoginId}
               </span>
             </div>
 
@@ -118,7 +112,10 @@ export function DerivAuth({ theme = "dark" }: DerivAuthProps) {
             )}
 
             {accounts.length > 1 && (
-              <Select value={activeLoginId || ""} onValueChange={switchAccount}>
+              <Select value={activeLoginId || ""} onValueChange={(val) => {
+                const acc = accounts.find(a => a.id === val);
+                if (acc && acc.token) switchAccount(acc.id, acc.token);
+              }}>
                 <SelectTrigger
                   className={`w-24 sm:w-32 h-7 text-xs sm:text-sm ${theme === "dark" ? "bg-gray-700 text-white border-blue-500/30" : "bg-white text-gray-900"}`}
                 >
@@ -134,20 +131,6 @@ export function DerivAuth({ theme = "dark" }: DerivAuthProps) {
               </Select>
             )}
           </div>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={openTokenSettings}
-            className={`h-9 w-9 ${
-              theme === "dark"
-                ? "text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
-                : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"
-            }`}
-            title="Change API Token"
-          >
-            <Settings className="h-5 w-5" />
-          </Button>
 
           <Avatar
             className="cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all w-9 h-9"
